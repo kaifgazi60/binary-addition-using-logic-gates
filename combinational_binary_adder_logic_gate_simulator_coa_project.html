@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Combinational Binary Adder Logic Gate Simulator — COA Project</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #0b0f19;
+      color: #e2e8f0;
+    }
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .wire-off {
+      stroke: #334155;
+      stroke-width: 3.5;
+      fill: none;
+      transition: stroke 0.25s ease, filter 0.25s ease;
+    }
+    .wire-on {
+      stroke: #10b981;
+      stroke-width: 4;
+      fill: none;
+      filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.75));
+      stroke-dasharray: 8 4;
+      animation: flow 0.8s linear infinite;
+      transition: stroke 0.25s ease, filter 0.25s ease;
+    }
+    .wire-carry-on {
+      stroke: #f59e0b;
+      stroke-width: 4;
+      fill: none;
+      filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.8));
+      stroke-dasharray: 8 4;
+      animation: flow 0.8s linear infinite;
+      transition: stroke 0.25s ease, filter 0.25s ease;
+    }
+    @keyframes flow {
+      to {
+        stroke-dashoffset: -12;
+      }
+    }
+    .gate-body {
+      fill: #1e293b;
+      stroke: #64748b;
+      stroke-width: 2.5;
+      transition: all 0.25s ease;
+    }
+    .gate-active-sum {
+      fill: #064e3b;
+      stroke: #10b981;
+      stroke-width: 2.8;
+      filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.4));
+    }
+    .gate-active-carry {
+      fill: #451a03;
+      stroke: #f59e0b;
+      stroke-width: 2.8;
+      filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.4));
+    }
+    .node-dot-off {
+      fill: #475569;
+    }
+    .node-dot-on {
+      fill: #10b981;
+      filter: drop-shadow(0 0 5px #10b981);
+    }
+    .kmap-cell {
+      transition: all 0.2s ease;
+    }
+    .kmap-active {
+      background-color: rgba(16, 185, 129, 0.25);
+      border-color: #10b981;
+      color: #6ee7b7;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
+      transform: scale(1.04);
+    }
+    .kmap-active-carry {
+      background-color: rgba(245, 158, 11, 0.25);
+      border-color: #f59e0b;
+      color: #fcd34d;
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.35);
+      transform: scale(1.04);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-emerald-500 selection:text-slate-950">
+
+  <!-- Top Header -->
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center text-slate-950 font-extrabold text-lg shadow-lg shadow-emerald-500/20 mono">
+          A⊕B
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base sm:text-lg font-bold text-white tracking-tight">Binary Adder Logic Gate Simulator</h1>
+            <span class="hidden sm:inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">COA Lab Project</span>
+          </div>
+          <p class="text-xs text-slate-400" id="headerSubtitle">Interactive Half Adder, Full Adder (with S₁, C₁, C₂ Truth Table) &amp; Verification</p>
+        </div>
+      </div>
+
+      <!-- Controls: Language Toggle & Auto-Test -->
+      <div class="flex items-center gap-2">
+        <button id="btnLangToggle" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 transition flex items-center gap-1.5">
+          <span>🌐</span>
+          <span id="langLabel">বাংলা / EN: Banglish Guide</span>
+        </button>
+        <button id="btnAutoVerify" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-slate-950 transition shadow-md shadow-emerald-600/20 flex items-center gap-1.5">
+          <span id="autoVerifyIcon">▶</span>
+          <span id="autoVerifyText">Auto-Verify Truth Table</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="max-w-7xl mx-auto px-4 flex gap-1 overflow-x-auto border-t border-slate-800/60 pt-2">
+      <button data-tab="half" class="tab-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap transition">
+        1. Half Adder (2-Bit)
+      </button>
+      <button data-tab="full" class="tab-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-t-lg border-b-2 border-emerald-400 text-emerald-400 bg-slate-800/70 whitespace-nowrap transition">
+        2. Full Adder (3-Bit)
+      </button>
+      <button data-tab="compare" class="tab-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap transition">
+        3. Circuit Comparison &amp; Viva Notes
+      </button>
+      <button data-tab="ripple" class="tab-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap transition">
+        4. 4-Bit Ripple Adder (Cascaded)
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="max-w-7xl w-full mx-auto px-4 py-5 flex-1 space-y-6">
+
+    <!-- Explainer Banner (Bilingual) -->
+    <div id="explainerBanner" class="rounded-xl bg-gradient-to-r from-slate-900 via-slate-800/90 to-slate-900 border border-slate-700/80 p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div class="space-y-1">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Project Objective</span>
+          <span id="bannerTitle" class="text-sm font-semibold text-white">প্রজেক্টের মূল বিষয় (What this COA Project means):</span>
+        </div>
+        <p id="bannerDesc" class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+          এই প্রজেক্টে তোমাকে লজিক গেট (XOR, AND, OR) ব্যবহার করে দুটি বাইনারি যোগের সার্কিট—<strong class="text-emerald-400">Half Adder</strong> (২টি ইনপুট: A, B) এবং <strong class="text-amber-400">Full Adder</strong> (৩টি ইনপুট: A, B, C<sub>in</sub>)—ডিজাইন করতে হবে, ইন্টারমিডিয়েট সিগন্যাল (<strong class="text-purple-300">S₁, C₁, C₂</strong>)-সহ প্রতিটি ইনপুটের জন্য <strong>Sum</strong> ও <strong>Carry</strong> বের করে Truth Table ভেরিফাই করতে হবে এবং দুটি সার্কিটের তুলনা করতে হবে।
+        </p>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <div class="px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-800 text-center">
+          <div class="text-[11px] text-slate-400">Verified Rows</div>
+          <div id="verifiedCounter" class="text-sm font-bold text-emerald-400 mono">1 / 8</div>
+        </div>
+        <button id="btnResetVerify" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700 transition">
+          Reset
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 1: HALF ADDER ==================== -->
+    <section id="tab-half" class="hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Column: Inputs + Interactive Gate Diagram (7 cols) -->
+        <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-4 shadow-xl">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+            <div>
+              <h2 class="text-base font-bold text-white flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                Half Adder Logic Gate Diagram
+              </h2>
+              <p class="text-xs text-slate-400">Adds two 1-bit binary numbers (A and B) using 1 XOR gate and 1 AND gate</p>
+            </div>
+            <div class="flex items-center gap-3 text-xs">
+              <span class="flex items-center gap-1.5 text-slate-400"><span class="w-3 h-1 bg-slate-600 inline-block rounded"></span> Logic 0 (LOW)</span>
+              <span class="flex items-center gap-1.5 text-emerald-400"><span class="w-3 h-1 bg-emerald-400 inline-block rounded"></span> Sum 1 (HIGH)</span>
+              <span class="flex items-center gap-1.5 text-amber-400"><span class="w-3 h-1 bg-amber-400 inline-block rounded"></span> Carry 1 (HIGH)</span>
+            </div>
+          </div>
+
+          <!-- Interactive Input Controls Bar -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-950/70 p-3.5 rounded-xl border border-slate-800/80">
+            <!-- Input A Toggle -->
+            <button id="btnHaA" class="flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-700 hover:border-emerald-500/60 transition group">
+              <div class="text-left">
+                <div class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Input A</div>
+                <div class="text-xs text-slate-400 group-hover:text-slate-200">Click to toggle</div>
+              </div>
+              <span id="valHaA" class="w-9 h-9 rounded-lg flex items-center justify-center text-lg font-extrabold mono bg-slate-800 text-slate-300 border border-slate-700 transition">0</span>
+            </button>
+
+            <!-- Input B Toggle -->
+            <button id="btnHaB" class="flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-700 hover:border-emerald-500/60 transition group">
+              <div class="text-left">
+                <div class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Input B</div>
+                <div class="text-xs text-slate-400 group-hover:text-slate-200">Click to toggle</div>
+              </div>
+              <span id="valHaB" class="w-9 h-9 rounded-lg flex items-center justify-center text-lg font-extrabold mono bg-slate-800 text-slate-300 border border-slate-700 transition">0</span>
+            </button>
+
+            <!-- Output SUM Display -->
+            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-900/90 border border-emerald-500/30">
+              <div>
+                <div class="text-[11px] uppercase tracking-wider text-emerald-400 font-semibold">Sum (S)</div>
+                <div class="text-xs text-slate-400 mono">A ⊕ B</div>
+              </div>
+              <span id="valHaSum" class="w-9 h-9 rounded-lg flex items-center justify-center text-lg font-extrabold mono bg-slate-800 text-slate-300 border border-slate-700 transition">0</span>
+            </div>
+
+            <!-- Output CARRY Display -->
+            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-900/90 border border-amber-500/30">
+              <div>
+                <div class="text-[11px] uppercase tracking-wider text-amber-400 font-semibold">Carry (C)</div>
+                <div class="text-xs text-slate-400 mono">A · B</div>
+              </div>
+              <span id="valHaCarry" class="w-9 h-9 rounded-lg flex items-center justify-center text-lg font-extrabold mono bg-slate-800 text-slate-300 border border-slate-700 transition">0</span>
+            </div>
+          </div>
+
+          <!-- Interactive SVG Logic Gate Diagram for Half Adder -->
+          <div class="relative bg-slate-950 rounded-xl border border-slate-800 p-3 flex items-center justify-center overflow-hidden">
+            <svg viewBox="0 0 650 300" class="w-full h-auto max-h-[320px] select-none">
+              <defs>
+                <pattern id="gridHa" width="20" height="20" patternUnits="userSpaceOnUse">
+                  <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1e293b" stroke-width="0.7"/>
+                </pattern>
+              </defs>
+              <rect width="650" height="300" fill="url(#gridHa)" />
+
+              <!-- Input A Wire to XOR and AND -->
+              <path id="ha-wire-a-main" d="M 75 75 L 265 75" class="wire-off" />
+              <path id="ha-wire-a-branch" d="M 160 75 L 160 195 L 275 195" class="wire-off" />
+              <circle id="ha-dot-a" cx="160" cy="75" r="5" class="node-dot-off" />
+
+              <!-- Input B Wire to XOR and AND -->
+              <path id="ha-wire-b-main" d="M 75 115 L 265 115" class="wire-off" />
+              <path id="ha-wire-b-branch" d="M 205 115 L 205 235 L 275 235" class="wire-off" />
+              <circle id="ha-dot-b" cx="205" cy="115" r="5" class="node-dot-off" />
+
+              <!-- Output Wires -->
+              <path id="ha-wire-sum" d="M 380 95 L 535 95" class="wire-off" />
+              <path id="ha-wire-carry" d="M 375 215 L 535 215" class="wire-off" />
+
+              <!-- Input Terminal A Box (Clickable inside SVG too) -->
+              <g id="svgBtnHaA" class="cursor-pointer">
+                <rect x="20" y="55" width="55" height="40" rx="8" fill="#1e293b" stroke="#475569" stroke-width="2" />
+                <text x="47" y="72" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="bold">IN A</text>
+                <text id="svgTextHaA" x="47" y="89" text-anchor="middle" fill="#f8fafc" font-size="15" font-weight="bold" class="mono">0</text>
+              </g>
+
+              <!-- Input Terminal B Box -->
+              <g id="svgBtnHaB" class="cursor-pointer">
+                <rect x="20" y="100" width="55" height="40" rx="8" fill="#1e293b" stroke="#475569" stroke-width="2" />
+                <text x="47" y="117" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="bold">IN B</text>
+                <text id="svgTextHaB" x="47" y="134" text-anchor="middle" fill="#f8fafc" font-size="15" font-weight="bold" class="mono">0</text>
+              </g>
+
+              <!-- XOR Gate (SUM) -->
+              <g>
+                <path d="M 255 55 Q 278 95 255 135" fill="none" stroke="#94a3b8" stroke-width="3" stroke-linecap="round" />
+                <path id="ha-gate-xor" d="M 268 55 C 315 55, 355 68, 380 95 C 355 122, 315 135, 268 135 Q 290 95 268 55 Z" class="gate-body" />
+                <text x="318" y="92" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="bold">XOR</text>
+                <text x="318" y="108" text-anchor="middle" fill="#94a3b8" font-size="10" class="mono">A ⊕ B</text>
+              </g>
+
+              <!-- AND Gate (CARRY) -->
+              <g>
+                <path id="ha-gate-and" d="M 275 175 L 325 175 A 45 40 0 0 1 325 255 L 275 255 Z" class="gate-body" />
+                <text x="320" y="212" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="bold">AND</text>
+                <text x="320" y="228" text-anchor="middle" fill="#94a3b8" font-size="10" class="mono">A · B</text>
+              </g>
+
+              <!-- Output LED Box: SUM -->
+              <g>
+                <rect id="ha-led-sum-box" x="535" y="70" width="95" height="50" rx="10" fill="#1e293b" stroke="#475569" stroke-width="2" />
+                <text x="582" y="90" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="bold">SUM (S)</text>
+                <text id="svgTextHaSum" x="582" y="111" text-anchor="middle" fill="#f8fafc" font-size="18" font-weight="bold" class="mono">0</text>
+              </g>
+
+              <!-- Output LED Box: CARRY -->
+              <g>
+                <rect id="ha-led-carry-box" x="535" y="190" width="95" height="50" rx="10" fill="#1e293b" stroke="#475569" stroke-width="2" />
+                <text x="582" y="210" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="bold">CARRY (C)</text>
+                <text id="svgTextHaCarry" x="582" y="231" text-anchor="middle" fill="#f8fafc" font-size="18" font-weight="bold" class="mono">0</text>
+              </g>
+            </svg>
+          </div>
+
+          <!-- Live Calculation & Equation Box -->
+          <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3.5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="space-y-1">
+              <div class="text-xs font-semibold text-slate-400">Live Boolean Evaluation:</div>
+              <div id="haLiveSumEq" class="text-xs sm:text-sm mono text-emerald-300">Sum = A ⊕ B = 0 ⊕ 0 = 0</div>
+              <div id="haLiveCarryEq" class="text-xs sm:text-sm mono text-amber-300">Carry = A · B = 0 · 0 = 0</div>
+            </div>
+            <div class="flex flex-col justify-center sm:items-end border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-800">
+              <div class="text-xs text-slate-400">Binary Addition Result:</div>
+              <div id="haBinaryMath" class="text-base sm:text-lg font-extrabold text-white mono">0₂ + 0₂ = 00₂ (Decimal: 0)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Interactive Truth Table & K-Maps (5 cols) -->
+        <div class="lg:col-span-5 flex flex-col gap-6">
+          
+          <!-- Half Adder Truth Table -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-sm sm:text-base font-bold text-white">Half Adder Truth Table</h3>
+                <p class="text-xs text-slate-400">Click any row to apply inputs &amp; verify outputs</p>
+              </div>
+              <span class="text-xs mono px-2.5 py-1 rounded bg-slate-800 text-emerald-400 border border-slate-700">2² = 4 Rows</span>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                <thead>
+                  <tr class="border-b border-slate-800 text-slate-400 uppercase text-[11px]">
+                    <th class="py-2.5 px-3">A</th>
+                    <th class="py-2.5 px-3">B</th>
+                    <th class="py-2.5 px-3 text-emerald-400">Sum (A⊕B)</th>
+                    <th class="py-2.5 px-3 text-amber-400">Carry (A·B)</th>
+                    <th class="py-2.5 px-3 text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="haTruthTableBody" class="divide-y divide-slate-800/60 mono">
+                  <!-- Populated dynamically by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Half Adder K-Map & Boolean Expressions -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
+            <h3 class="text-sm sm:text-base font-bold text-white">Karnaugh Maps (K-Map) &amp; Logic Equations</h3>
+            <div class="grid grid-cols-2 gap-4">
+              <!-- K-Map for SUM -->
+              <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                <div class="text-xs font-bold text-emerald-400 mb-2">K-Map for Sum (S)</div>
+                <div class="grid grid-cols-3 gap-1 text-center text-xs mono">
+                  <div class="p-1 text-slate-500">A \ B</div>
+                  <div class="p-1 text-slate-400 font-bold">B=0</div>
+                  <div class="p-1 text-slate-400 font-bold">B=1</div>
+                  
+                  <div class="p-1 text-slate-400 font-bold">A=0</div>
+                  <div id="ha-kmap-s-00" class="kmap-cell p-2 rounded border border-slate-800 bg-slate-900">0</div>
+                  <div id="ha-kmap-s-01" class="kmap-cell p-2 rounded border border-slate-800 bg-slate-900">1</div>
+                  
+                  <div class="p-1 text-slate-400 font-bold">A=1</div>
+                  <div id="ha-kmap-s-10" class="kmap-cell p-2 rounded border border-slate-800 bg-slate-900">1</div>
+                  <div id="ha-kmap-s-11" class="kmap-cell p-2 rounded border border-slate-800 bg-slate-900">0</div>
+                </div>
+                <div class="mt-2.5 text-[11px] text-slate-300 mono">
+                  S = A'B + AB' = <span class="text-emerald-400 font-bold">A ⊕ B</span>
+                </div>
+              </div>
+
+              <!-- K-Map for CARRY -->
+              <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                <div class="text-xs font-bold text-amber-400 mb-2">K-Map for Carry (C)</div>
+                <div class="grid grid-cols-3 gap-1 text-center text-xs mono">
+                  <div class="p-1 text-slate-500">A \ B</div>
+                  <div class="p-1 text-slate-400 font-bold">B=0</div>
+                  <div class="p-1 text-slate-400 font-bold">B=1</div>
+                  
+                  <div class="p-1 text-slate-400 font-bold">A=0</div>
+                  <div id="ha-kmap-c-00" class="kmap-cell p-2 rounded border border-slate-800 bg-slate-900">0</div>
+                  <div id="ha-kmap-c-01" class="kmap-cell p-2 rounded border border-slate-800 bg-slate-900">0</div>
+                  
+                  <div class="p-1 text-slate-400 font-bold">A=1</div>
+                  <div id="ha-kmap-c-10" class="kmap-cell p-2 rounded border border-slate-800 bg-slate-900">0</div>
+                  <div id="ha-kmap-c-11" class="kmap-cell p-2 rounded border border-slate-800 bg-slate-900">1</div>
+                </div>
+                <div class="mt-2.5 text-[11px] text-slate-300 mono">
+                  C = <span class="text-amber-400 font-bold">A · B</span>
+                </div>
+              </div>
+            </div>
+            <div class="text-xs text-slate-400 bg-slate-950/60 p-3 rounded-lg border border-slate-800/80">
+              <strong class="text-amber-300">Limitation of Half Adder:</strong> এর কোনো <span class="mono">Carry-In (C<sub>in</sub>)</span> ইনপুট নেই। তাই একাধিক বিট যোগ করার সময় আগের পজিশন থেকে আসা Carry যোগ করতে পারে না। এই সমস্যার সমাধান করে <strong>Full Adder</strong>।
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2: FULL ADDER ==================== -->
+    <section id="tab-full" class="space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Column: Full Adder Schematic & Controls (6 cols) -->
+        <div class="lg:col-span-6 bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-4 shadow-xl">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+            <div>
+              <h2 class="text-base font-bold text-white flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+                Full Adder Logic Gate Diagram (Showing S₁, C₁ &amp; C₂)
+              </h2>
+              <p class="text-xs text-slate-400">Half Adder 1 produces <strong class="text-purple-300">S₁ = A⊕B</strong> and <strong class="text-pink-300">C₁ = A·B</strong>; Half Adder 2 produces <strong class="text-emerald-300">Sum = S₁⊕C<sub>in</sub></strong> and <strong class="text-orange-300">C₂ = S₁·C<sub>in</sub></strong></p>
+            </div>
+          </div>
+
+          <!-- Interactive Input Controls Bar for Full Adder -->
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 bg-slate-950/70 p-3 rounded-xl border border-slate-800/80">
+            <!-- Input A -->
+            <button id="btnFaA" class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 border border-slate-700 hover:border-emerald-500/60 transition">
+              <div class="text-left">
+                <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Input A</div>
+                <div class="text-[11px] text-slate-400">Toggle</div>
+              </div>
+              <span id="valFaA" class="w-8 h-8 rounded-lg flex items-center justify-center text-base font-extrabold mono bg-slate-800 text-slate-300 border border-slate-700">0</span>
+            </button>
+
+            <!-- Input B -->
+            <button id="btnFaB" class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 border border-slate-700 hover:border-emerald-500/60 transition">
+              <div class="text-left">
+                <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Input B</div>
+                <div class="text-[11px] text-slate-400">Toggle</div>
+              </div>
+              <span id="valFaB" class="w-8 h-8 rounded-lg flex items-center justify-center text-base font-extrabold mono bg-slate-800 text-slate-300 border border-slate-700">0</span>
+            </button>
+
+            <!-- Input Cin -->
+            <button id="btnFaCin" class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 border border-slate-700 hover:border-emerald-500/60 transition">
+              <div class="text-left">
+                <div class="text-[10px] uppercase tracking-wider text-cyan-400 font-semibold">Carry In</div>
+                <div class="text-[11px] text-slate-400 mono">C<sub>in</sub></div>
+              </div>
+              <span id="valFaCin" class="w-8 h-8 rounded-lg flex items-center justify-center text-base font-extrabold mono bg-slate-800 text-slate-300 border border-slate-700">0</span>
+            </button>
+
+            <!-- Output SUM -->
+            <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/90 border border-emerald-500/30">
+              <div>
+                <div class="text-[10px] uppercase tracking-wider text-emerald-400 font-semibold">Sum (S)</div>
+                <div class="text-[11px] text-slate-400 mono">S₁⊕C<sub>in</sub></div>
+              </div>
+              <span id="valFaSum" class="w-8 h-8 rounded-lg flex items-center justify-center text-base font-extrabold mono bg-slate-800 text-slate-300 border border-slate-700">0</span>
+            </div>
+
+            <!-- Output Cout -->
+            <div class="col-span-2 sm:col-span-1 flex items-center justify-between p-2.5 rounded-xl bg-slate-900/90 border border-amber-500/30">
+              <div>
+                <div class="text-[10px] uppercase tracking-wider text-amber-400 font-semibold">C<sub>out</sub></div>
+                <div class="text-[11px] text-slate-400 mono">C₁ + C₂</div>
+              </div>
+              <span id="valFaCout" class="w-8 h-8 rounded-lg flex items-center justify-center text-base font-extrabold mono bg-slate-800 text-slate-300 border border-slate-700">0</span>
+            </div>
+          </div>
+
+          <!-- Intermediate Signals Live Pill Bar (S1, C1, C2) -->
+          <div class="grid grid-cols-3 gap-2.5 bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
+            <div class="flex items-center justify-between px-3 py-1.5 rounded-lg bg-purple-950/30 border border-purple-500/30">
+              <div>
+                <div class="text-[10px] font-bold uppercase text-purple-300">HA1 Sum (S₁)</div>
+                <div class="text-[11px] text-slate-400 mono">A ⊕ B</div>
+              </div>
+              <span id="pillFaS1" class="text-sm font-extrabold mono px-2 py-0.5 rounded bg-slate-800 text-purple-300">0</span>
+            </div>
+            <div class="flex items-center justify-between px-3 py-1.5 rounded-lg bg-pink-950/30 border border-pink-500/30">
+              <div>
+                <div class="text-[10px] font-bold uppercase text-pink-300">HA1 Carry (C₁)</div>
+                <div class="text-[11px] text-slate-400 mono">A · B</div>
+              </div>
+              <span id="pillFaC1" class="text-sm font-extrabold mono px-2 py-0.5 rounded bg-slate-800 text-pink-300">0</span>
+            </div>
+            <div class="flex items-center justify-between px-3 py-1.5 rounded-lg bg-orange-950/30 border border-orange-500/30">
+              <div>
+                <div class="text-[10px] font-bold uppercase text-orange-300">HA2 Carry (C₂)</div>
+                <div class="text-[11px] text-slate-400 mono">S₁ · C<sub>in</sub></div>
+              </div>
+              <span id="pillFaC2" class="text-sm font-extrabold mono px-2 py-0.5 rounded bg-slate-800 text-orange-300">0</span>
+            </div>
+          </div>
+
+          <!-- Full Adder Interactive SVG Schematic -->
+          <div class="relative bg-slate-950 rounded-xl border border-slate-800 p-2 sm:p-3 flex items-center justify-center overflow-hidden">
+            <svg viewBox="0 0 760 390" class="w-full h-auto max-h-[360px] select-none">
+              <defs>
+                <pattern id="gridFa" width="20" height="20" patternUnits="userSpaceOnUse">
+                  <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1e293b" stroke-width="0.7"/>
+                </pattern>
+              </defs>
+              <rect width="760" height="390" fill="url(#gridFa)" />
+
+              <!-- Dashed Highlight Boxes for Half Adder 1 & Half Adder 2 -->
+              <rect x="145" y="22" width="195" height="225" rx="12" fill="rgba(15, 23, 42, 0.45)" stroke="#334155" stroke-width="1.5" stroke-dasharray="6 4" />
+              <text x="242" y="38" text-anchor="middle" fill="#64748b" font-size="10" font-weight="bold">HALF ADDER 1 (S₁, C₁)</text>
+
+              <rect x="375" y="45" width="185" height="225" rx="12" fill="rgba(15, 23, 42, 0.45)" stroke="#334155" stroke-width="1.5" stroke-dasharray="6 4" />
+              <text x="467" y="61" text-anchor="middle" fill="#64748b" font-size="10" font-weight="bold">HALF ADDER 2 (Sum, C₂)</text>
+
+              <!-- WIRES: A and B into HA1 -->
+              <path id="fa-wire-a" d="M 75 70 L 200 70" class="wire-off" />
+              <path id="fa-wire-a-and1" d="M 115 70 L 115 175 L 205 175" class="wire-off" />
+              <circle id="fa-dot-a" cx="115" cy="70" r="4.5" class="node-dot-off" />
+
+              <path id="fa-wire-b" d="M 75 105 L 200 105" class="wire-off" />
+              <path id="fa-wire-b-and1" d="M 135 105 L 135 205 L 205 205" class="wire-off" />
+              <circle id="fa-dot-b" cx="135" cy="105" r="4.5" class="node-dot-off" />
+
+              <!-- Intermediate Wire S1 (Output of XOR1 -> Input of XOR2 and AND2) -->
+              <path id="fa-wire-s1" d="M 295 88 L 430 88" class="wire-off" />
+              <path id="fa-wire-s1-and2" d="M 355 88 L 355 195 L 435 195" class="wire-off" />
+              <circle id="fa-dot-s1" cx="355" cy="88" r="4.5" class="node-dot-off" />
+
+              <!-- Wire Cin -->
+              <path id="fa-wire-cin" d="M 75 310 L 395 310 L 395 122 L 430 122" class="wire-off" />
+              <path id="fa-wire-cin-and2" d="M 395 225 L 435 225" class="wire-off" />
+              <circle id="fa-dot-cin" cx="395" cy="225" r="4.5" class="node-dot-off" />
+
+              <!-- Intermediate Wire C2 (Output of AND2 -> Input of OR) -->
+              <path id="fa-wire-c2" d="M 515 210 L 545 210 L 545 275 L 575 275" class="wire-off" />
+
+              <!-- Intermediate Wire C1 (Output of AND1 -> Input of OR) -->
+              <path id="fa-wire-c1" d="M 285 190 L 320 190 L 320 315 L 575 315" class="wire-off" />
+
+              <!-- Final Output Wires: SUM and COUT -->
+              <path id="fa-wire-sum" d="M 525 105 L 650 105" class="wire-off" />
+              <path id="fa-wire-cout" d="M 655 295 L 675 295" class="wire-off" />
+
+              <!-- Input Boxes (Clickable) -->
+              <g id="svgBtnFaA" class="cursor-pointer">
+                <rect x="18" y="52" width="57" height="36" rx="7" fill="#1e293b" stroke="#475569" stroke-width="2" />
+                <text x="46" y="67" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="bold">IN A</text>
+                <text id="svgTextFaA" x="46" y="82" text-anchor="middle" fill="#f8fafc" font-size="14" font-weight="bold" class="mono">0</text>
+              </g>
+
+              <g id="svgBtnFaB" class="cursor-pointer">
+                <rect x="18" y="92" width="57" height="36" rx="7" fill="#1e293b" stroke="#475569" stroke-width="2" />
+                <text x="46" y="107" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="bold">IN B</text>
+                <text id="svgTextFaB" x="46" y="122" text-anchor="middle" fill="#f8fafc" font-size="14" font-weight="bold" class="mono">0</text>
+              </g>
+
+              <g id="svgBtnFaCin" class="cursor-pointer">
+                <rect x="18" y="292" width="57" height="36" rx="7" fill="#1e293b" stroke="#475569" stroke-width="2" />
+                <text x="46" y="307" text-anchor="middle" fill="#38bdf8" font-size="10" font-weight="bold">C_in</text>
+                <text id="svgTextFaCin" x="46" y="322" text-anchor="middle" fill="#f8fafc" font-size="14" font-weight="bold" class="mono">0</text>
+              </g>
+
+              <!-- GATE 1: XOR1 -->
+              <g>
+                <path d="M 190 55 Q 210 88 190 121" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round" />
+                <path id="fa-gate-xor1" d="M 200 55 C 240 55, 275 66, 295 88 C 275 110, 240 121, 200 121 Q 218 88 200 55 Z" class="gate-body" />
+                <text x="242" y="92" text-anchor="middle" fill="#e2e8f0" font-size="11" font-weight="bold">XOR 1</text>
+              </g>
+
+              <!-- GATE 2: AND1 -->
+              <g>
+                <path id="fa-gate-and1" d="M 205 158 L 245 158 A 38 32 0 0 1 245 222 L 205 222 Z" class="gate-body" />
+                <text x="242" y="194" text-anchor="middle" fill="#e2e8f0" font-size="11" font-weight="bold">AND 1</text>
+              </g>
+
+              <!-- GATE 3: XOR2 (Final SUM) -->
+              <g>
+                <path d="M 420 72 Q 440 105 420 138" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round" />
+                <path id="fa-gate-xor2" d="M 430 72 C 470 72, 505 83, 525 105 C 505 127, 470 138, 430 138 Q 448 105 430 72 Z" class="gate-body" />
+                <text x="472" y="109" text-anchor="middle" fill="#e2e8f0" font-size="11" font-weight="bold">XOR 2</text>
+              </g>
+
+              <!-- GATE 4: AND2 -->
+              <g>
+                <path id="fa-gate-and2" d="M 435 178 L 475 178 A 38 32 0 0 1 475 242 L 435 242 Z" class="gate-body" />
+                <text x="472" y="214" text-anchor="middle" fill="#e2e8f0" font-size="11" font-weight="bold">AND 2</text>
+              </g>
+
+              <!-- GATE 5: OR Gate (Final Cout) -->
+              <g>
+                <path id="fa-gate-or" d="M 570 262 C 605 262, 635 273, 655 295 C 635 317, 605 328, 570 328 Q 588 295 570 262 Z" class="gate-body" />
+                <text x="608" y="299" text-anchor="middle" fill="#e2e8f0" font-size="11" font-weight="bold">OR</text>
+              </g>
+
+              <!-- Intermediate Signal Badges -->
+              <g>
+                <rect x="315" y="56" width="68" height="22" rx="5" fill="#0f172a" stroke="#a855f7" stroke-width="1.5" />
+                <text id="faBadgeS1" x="349" y="71" text-anchor="middle" fill="#d8b4fe" font-size="10" font-weight="bold" class="mono">S₁ = 0</text>
+              </g>
+              <g>
+                <rect x="332" y="324" width="68" height="22" rx="5" fill="#0f172a" stroke="#ec4899" stroke-width="1.5" />
+                <text id="faBadgeC1" x="366" y="339" text-anchor="middle" fill="#f9a8d4" font-size="10" font-weight="bold" class="mono">C₁ = 0</text>
+              </g>
+              <g>
+                <rect x="475" y="248" width="64" height="22" rx="5" fill="#0f172a" stroke="#f97316" stroke-width="1.5" />
+                <text id="faBadgeC2" x="507" y="263" text-anchor="middle" fill="#fdba74" font-size="10" font-weight="bold" class="mono">C₂ = 0</text>
+              </g>
+
+              <!-- Output Box: SUM -->
+              <g>
+                <rect id="fa-led-sum-box" x="650" y="80" width="92" height="50" rx="10" fill="#1e293b" stroke="#475569" stroke-width="2" />
+                <text x="696" y="100" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="bold">SUM (S)</text>
+                <text id="svgTextFaSum" x="696" y="121" text-anchor="middle" fill="#f8fafc" font-size="17" font-weight="bold" class="mono">0</text>
+              </g>
+
+              <!-- Output Box: COUT -->
+              <g>
+                <rect id="fa-led-cout-box" x="665" y="270" width="80" height="50" rx="10" fill="#1e293b" stroke="#475569" stroke-width="2" />
+                <text x="705" y="290" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="bold">C_out</text>
+                <text id="svgTextFaCout" x="705" y="311" text-anchor="middle" fill="#f8fafc" font-size="17" font-weight="bold" class="mono">0</text>
+              </g>
+            </svg>
+          </div>
+
+          <!-- Step-by-Step Signal Propagation Breakdown -->
+          <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3.5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="space-y-1 text-xs mono">
+              <div class="text-slate-400 font-sans font-semibold">Internal &amp; Final Gate Signals:</div>
+              <div id="faEqS1" class="text-purple-300">1) S₁ = A ⊕ B = 0 ⊕ 0 = 0  |  C₁ = A · B = 0 · 0 = 0</div>
+              <div id="faEqSum" class="text-emerald-300 font-bold">2) Sum = S₁ ⊕ C_in = 0 ⊕ 0 = 0</div>
+              <div id="faEqCout" class="text-amber-300 font-bold">3) C_out = C₁ + C₂ = 0 + 0 = 0</div>
+            </div>
+            <div class="flex flex-col justify-center sm:items-end border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-800">
+              <div class="text-xs text-slate-400">3-Bit Binary Addition Result:</div>
+              <div id="faBinaryMath" class="text-base sm:text-lg font-extrabold text-white mono">0₂ + 0₂ + 0₂ = 00₂ (Dec: 0)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Full Adder Complete Truth Table with S1, C1, C2 & Equations (6 cols) -->
+        <div class="lg:col-span-6 flex flex-col gap-5">
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                  <span>Full Adder Complete Truth Table (with S₁, C₁ &amp; C₂)</span>
+                </h3>
+                <p class="text-xs text-slate-400">Includes intermediate Half-Adder outputs <strong class="text-purple-300">S₁ (A⊕B)</strong>, <strong class="text-pink-300">C₁ (A·B)</strong>, and <strong class="text-orange-300">C₂ (S₁·C<sub>in</sub>)</strong>. Click any row to test!</p>
+              </div>
+              <span class="text-xs mono px-2.5 py-1 rounded bg-slate-800 text-cyan-400 border border-slate-700">2³ = 8 Rows</span>
+            </div>
+
+            <div class="overflow-x-auto rounded-xl border border-slate-800">
+              <table class="w-full text-center border-collapse text-xs">
+                <thead>
+                  <!-- Group Header Row -->
+                  <tr class="bg-slate-950 border-b border-slate-800 text-[10px] uppercase tracking-wider">
+                    <th colspan="3" class="py-1.5 px-2 text-slate-400 border-r border-slate-800">Inputs (3-Bit)</th>
+                    <th colspan="3" class="py-1.5 px-2 text-purple-300 border-r border-slate-800 bg-purple-950/20">Intermediate Signals (Internal Gates)</th>
+                    <th colspan="2" class="py-1.5 px-2 text-emerald-300 border-r border-slate-800 bg-emerald-950/20">Final Outputs</th>
+                    <th class="py-1.5 px-2 text-slate-400">Verify</th>
+                  </tr>
+                  <!-- Column Header Row -->
+                  <tr class="border-b border-slate-800 bg-slate-900/90 text-slate-300 text-[11px] mono">
+                    <th class="py-2 px-2">A</th>
+                    <th class="py-2 px-2">B</th>
+                    <th class="py-2 px-2 text-cyan-400 border-r border-slate-800">C<sub>in</sub></th>
+                    <th class="py-2 px-2 text-purple-300 bg-purple-950/10" title="Half Adder 1 Sum = A XOR B">
+                      <div>S₁</div>
+                      <div class="text-[9px] text-slate-400 font-normal">A⊕B</div>
+                    </th>
+                    <th class="py-2 px-2 text-pink-300 bg-pink-950/10" title="Half Adder 1 Carry = A AND B">
+                      <div>C₁</div>
+                      <div class="text-[9px] text-slate-400 font-normal">A·B</div>
+                    </th>
+                    <th class="py-2 px-2 text-orange-300 bg-orange-950/10 border-r border-slate-800" title="Half Adder 2 Carry = S1 AND Cin">
+                      <div>C₂</div>
+                      <div class="text-[9px] text-slate-400 font-normal">S₁·C<sub>in</sub></div>
+                    </th>
+                    <th class="py-2 px-2 text-emerald-400 font-bold" title="Final Sum = S1 XOR Cin">
+                      <div>Sum</div>
+                      <div class="text-[9px] text-slate-400 font-normal">S₁⊕C<sub>in</sub></div>
+                    </th>
+                    <th class="py-2 px-2 text-amber-400 font-bold border-r border-slate-800" title="Final Carry Out = C1 OR C2">
+                      <div>C<sub>out</sub></div>
+                      <div class="text-[9px] text-slate-400 font-normal">C₁+C₂</div>
+                    </th>
+                    <th class="py-2 px-2">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="faTruthTableBody" class="divide-y divide-slate-800/70 mono">
+                  <!-- Populated by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Intermediate Signal Step-by-Step Derivation Card -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-3">
+            <h3 class="text-sm font-bold text-white">How S₁, C₁ &amp; C₂ Build the Full Adder (Step-by-Step Equations)</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs mono">
+              <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1.5">
+                <div class="text-[11px] font-sans font-bold text-purple-300 uppercase">Stage 1: First Half Adder (HA1)</div>
+                <div><span class="text-purple-300 font-bold">S₁</span> = A ⊕ B <span class="text-slate-400 text-[11px]">(XOR 1 Output)</span></div>
+                <div><span class="text-pink-300 font-bold">C₁</span> = A · B <span class="text-slate-400 text-[11px]">(AND 1 Output)</span></div>
+              </div>
+              <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1.5">
+                <div class="text-[11px] font-sans font-bold text-orange-300 uppercase">Stage 2: Second Half Adder (HA2) &amp; OR</div>
+                <div><span class="text-orange-300 font-bold">C₂</span> = S₁ · C<sub>in</sub> = (A ⊕ B) · C<sub>in</sub> <span class="text-slate-400 text-[11px]">(AND 2)</span></div>
+                <div><span class="text-emerald-400 font-bold">Sum</span> = S₁ ⊕ C<sub>in</sub> = A ⊕ B ⊕ C<sub>in</sub> <span class="text-slate-400 text-[11px]">(XOR 2)</span></div>
+                <div><span class="text-amber-400 font-bold">C<sub>out</sub></span> = C₁ + C₂ = (A · B) + (S₁ · C<sub>in</sub>) <span class="text-slate-400 text-[11px]">(OR)</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: COMPARISON & VIVA GUIDE ==================== -->
+    <section id="tab-compare" class="hidden space-y-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-base sm:text-lg font-bold text-white">Half Adder vs. Full Adder — Detailed Architectural Comparison</h2>
+            <p class="text-xs text-slate-400">Direct comparison table for your Computer Organization project report &amp; lab viva</p>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs sm:text-sm">
+            <thead>
+              <tr class="border-b border-slate-700 bg-slate-950/80 text-slate-300">
+                <th class="py-3 px-4 font-bold">Feature / Parameter</th>
+                <th class="py-3 px-4 font-bold text-emerald-400">Half Adder (HA)</th>
+                <th class="py-3 px-4 font-bold text-amber-400">Full Adder (FA)</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800 text-slate-300">
+              <tr class="hover:bg-slate-800/40">
+                <td class="py-3 px-4 font-semibold text-white">Definition &amp; Purpose</td>
+                <td class="py-3 px-4">Adds two 1-bit binary digits (A, B). Does not accept any previous carry.</td>
+                <td class="py-3 px-4">Adds three 1-bit binary digits (A, B, and Carry-In C<sub>in</sub> from a previous stage).</td>
+              </tr>
+              <tr class="hover:bg-slate-800/40">
+                <td class="py-3 px-4 font-semibold text-white">Number of Inputs &amp; Outputs</td>
+                <td class="py-3 px-4 mono">2 Inputs (A, B) → 2 Outputs (Sum, Carry)</td>
+                <td class="py-3 px-4 mono">3 Inputs (A, B, C<sub>in</sub>) → Intermediate (S₁, C₁, C₂) → 2 Final Outputs (Sum, C<sub>out</sub>)</td>
+              </tr>
+              <tr class="hover:bg-slate-800/40">
+                <td class="py-3 px-4 font-semibold text-white">Truth Table Size</td>
+                <td class="py-3 px-4 mono">2² = 4 input combinations</td>
+                <td class="py-3 px-4 mono">2³ = 8 input combinations</td>
+              </tr>
+              <tr class="hover:bg-slate-800/40">
+                <td class="py-3 px-4 font-semibold text-white">Logical Expression for SUM</td>
+                <td class="py-3 px-4 mono text-emerald-300">Sum = A ⊕ B</td>
+                <td class="py-3 px-4 mono text-emerald-300">Sum = S₁ ⊕ C<sub>in</sub> = A ⊕ B ⊕ C<sub>in</sub></td>
+              </tr>
+              <tr class="hover:bg-slate-800/40">
+                <td class="py-3 px-4 font-semibold text-white">Logical Expression for CARRY</td>
+                <td class="py-3 px-4 mono text-amber-300">Carry = A · B</td>
+                <td class="py-3 px-4 mono text-amber-300">C<sub>out</sub> = C₁ + C₂ = A·B + C<sub>in</sub>(A ⊕ B)</td>
+              </tr>
+              <tr class="hover:bg-slate-800/40">
+                <td class="py-3 px-4 font-semibold text-white">Logic Gates Required</td>
+                <td class="py-3 px-4"><strong>2 Gates Total:</strong> 1 XOR gate + 1 AND gate</td>
+                <td class="py-3 px-4"><strong>5 Gates Total:</strong> 2 XOR gates + 2 AND gates + 1 OR gate (2 Half Adders + 1 OR)</td>
+              </tr>
+              <tr class="hover:bg-slate-800/40">
+                <td class="py-3 px-4 font-semibold text-white">IC Chip Numbers (74xx TTL Lab)</td>
+                <td class="py-3 px-4 mono">IC 7486 (XOR) + IC 7408 (AND)</td>
+                <td class="py-3 px-4 mono">IC 7486 (XOR) + IC 7408 (AND) + IC 7432 (OR)</td>
+              </tr>
+              <tr class="hover:bg-slate-800/40">
+                <td class="py-3 px-4 font-semibold text-white">Cascading / Multi-bit Addition</td>
+                <td class="py-3 px-4">Cannot be cascaded alone for multi-bit addition (only usable for the LSB bit 0).</td>
+                <td class="py-3 px-4">Easily cascaded into Ripple Carry Adders (4-bit, 8-bit, 32-bit, 64-bit ALU adders).</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Bengali / English Viva & Project Guide Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2">
+          <div class="text-xs font-bold uppercase tracking-wider text-emerald-400">Step 1: Circuit Design</div>
+          <h3 class="text-sm font-bold text-white">১. লজিক গেট দিয়ে সার্কিট ডিজাইন</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Combinational circuit মানে এমন ডিজিটাল সার্কিট যার আউটপুট শুধুমাত্র বর্তমান ইনপুটের ওপর নির্ভর করে (কোনো মেমোরি বা ফিডব্যাক থাকে না)। প্রজেক্টে তোমাকে Half Adder এবং Full Adder-এর গেট-লেভেল ডায়াগ্রাম আঁকতে হবে।
+          </p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2">
+          <div class="text-xs font-bold uppercase tracking-wider text-cyan-400">Step 2: S₁, C₁, C₂ &amp; Truth Table</div>
+          <h3 class="text-sm font-bold text-white">২. S₁, C₁, C₂ ও ফাইনাল Sum/Carry হিসাব</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Full Adder-এর প্রথম Half Adder থেকে <span class="mono text-purple-300">S₁ = A⊕B</span> এবং <span class="mono text-pink-300">C₁ = A·B</span> তৈরি হয়। এরপর দ্বিতীয় Half Adder-এ <span class="mono">S₁</span> ও <span class="mono">C<sub>in</sub></span> মিলে ফাইনাল <span class="mono text-emerald-300">Sum = S₁⊕C<sub>in</sub></span> এবং <span class="mono text-orange-300">C₂ = S₁·C<sub>in</sub></span> বানায়। শেষে <span class="mono text-amber-300">C<sub>out</sub> = C₁ + C₂</span> পাওয়া যায়।
+          </p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2">
+          <div class="text-xs font-bold uppercase tracking-wider text-amber-400">Step 3: Compare Both Circuits</div>
+          <h3 class="text-sm font-bold text-white">৩. দুটি সার্কিটের তুলনা (Comparison)</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            কেন Half Adder দিয়ে একা মাল্টি-বিট যোগ করা যায় না এবং কীভাবে ২টি Half Adder ও ১টি OR গেট যুক্ত করে একটি Full Adder তৈরি হয়—সেই তুলনাটি প্রজেক্ট রিপোর্টের মূল উপসংহার।
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 4: 4-BIT RIPPLE CARRY ADDER ==================== -->
+    <section id="tab-ripple" class="hidden space-y-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-5">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <div>
+            <h2 class="text-base sm:text-lg font-bold text-white">4-Bit Ripple Carry Adder Simulator (Cascaded Full Adders)</h2>
+            <p class="text-xs text-slate-400">Shows why Full Adders are essential: C<sub>out</sub> of each stage ripples into C<sub>in</sub> of the next stage</p>
+          </div>
+          <div id="rcaDecimalSummary" class="px-3.5 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-bold text-xs sm:text-sm mono">
+            0000₂ (0) + 0000₂ (0) = 00000₂ (0)
+          </div>
+        </div>
+
+        <!-- 4-bit Input Toggles -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- 4-Bit Input A -->
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-300">4-Bit Number A (A₃ A₂ A₁ A₀)</span>
+              <span id="rcaValADec" class="text-xs mono text-emerald-400 font-bold">Decimal: 0</span>
+            </div>
+            <div class="grid grid-cols-4 gap-2">
+              <button data-rca-a="3" class="rca-btn-a p-3 rounded-lg bg-slate-900 border border-slate-700 hover:border-emerald-500 text-center transition">
+                <div class="text-[10px] text-slate-400">A₃ (MSB)</div>
+                <div class="text-lg font-extrabold mono text-white mt-0.5">0</div>
+              </button>
+              <button data-rca-a="2" class="rca-btn-a p-3 rounded-lg bg-slate-900 border border-slate-700 hover:border-emerald-500 text-center transition">
+                <div class="text-[10px] text-slate-400">A₂</div>
+                <div class="text-lg font-extrabold mono text-white mt-0.5">0</div>
+              </button>
+              <button data-rca-a="1" class="rca-btn-a p-3 rounded-lg bg-slate-900 border border-slate-700 hover:border-emerald-500 text-center transition">
+                <div class="text-[10px] text-slate-400">A₁</div>
+                <div class="text-lg font-extrabold mono text-white mt-0.5">0</div>
+              </button>
+              <button data-rca-a="0" class="rca-btn-a p-3 rounded-lg bg-slate-900 border border-slate-700 hover:border-emerald-500 text-center transition">
+                <div class="text-[10px] text-slate-400">A₀ (LSB)</div>
+                <div class="text-lg font-extrabold mono text-white mt-0.5">0</div>
+              </button>
+            </div>
+          </div>
+
+          <!-- 4-Bit Input B -->
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-300">4-Bit Number B (B₃ B₂ B₁ B₀)</span>
+              <span id="rcaValBDec" class="text-xs mono text-cyan-400 font-bold">Decimal: 0</span>
+            </div>
+            <div class="grid grid-cols-4 gap-2">
+              <button data-rca-b="3" class="rca-btn-b p-3 rounded-lg bg-slate-900 border border-slate-700 hover:border-cyan-500 text-center transition">
+                <div class="text-[10px] text-slate-400">B₃ (MSB)</div>
+                <div class="text-lg font-extrabold mono text-white mt-0.5">0</div>
+              </button>
+              <button data-rca-b="2" class="rca-btn-b p-3 rounded-lg bg-slate-900 border border-slate-700 hover:border-cyan-500 text-center transition">
+                <div class="text-[10px] text-slate-400">B₂</div>
+                <div class="text-lg font-extrabold mono text-white mt-0.5">0</div>
+              </button>
+              <button data-rca-b="1" class="rca-btn-b p-3 rounded-lg bg-slate-900 border border-slate-700 hover:border-cyan-500 text-center transition">
+                <div class="text-[10px] text-slate-400">B₁</div>
+                <div class="text-lg font-extrabold mono text-white mt-0.5">0</div>
+              </button>
+              <button data-rca-b="0" class="rca-btn-b p-3 rounded-lg bg-slate-900 border border-slate-700 hover:border-cyan-500 text-center transition">
+                <div class="text-[10px] text-slate-400">B₀ (LSB)</div>
+                <div class="text-lg font-extrabold mono text-white mt-0.5">0</div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4 Full Adder Stages Block Diagram (MSB on Left to LSB on Right) -->
+        <div id="rcaStagesGrid" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <!-- Populated dynamically by JS -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Application State (Default opens on Tab 2: Full Adder so user immediately sees S1, C1, C2 truth table)
+    const state = {
+      activeTab: 'full',
+      langMode: 'bn',
+      ha: { a: 0, b: 0, verified: [false, false, false, false] },
+      fa: { a: 0, b: 0, cin: 0, verified: [false, false, false, false, false, false, false, false] },
+      rca: { a: [0, 0, 0, 0], b: [0, 0, 0, 0] },
+      autoTimer: null
+    };
+
+    function styleBadge(el, val, activeColor = 'emerald') {
+      el.textContent = val;
+      if (val === 1) {
+        if (activeColor === 'amber') {
+          el.className = 'w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center text-base sm:text-lg font-extrabold mono bg-amber-500 text-slate-950 border border-amber-300 shadow-lg shadow-amber-500/30 transition';
+        } else if (activeColor === 'cyan') {
+          el.className = 'w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center text-base sm:text-lg font-extrabold mono bg-cyan-400 text-slate-950 border border-cyan-200 shadow-lg shadow-cyan-400/30 transition';
+        } else {
+          el.className = 'w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center text-base sm:text-lg font-extrabold mono bg-emerald-500 text-slate-950 border border-emerald-300 shadow-lg shadow-emerald-500/30 transition';
+        }
+      } else {
+        el.className = 'w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center text-base sm:text-lg font-extrabold mono bg-slate-800 text-slate-300 border border-slate-700 transition';
+      }
+    }
+
+    function setWire(id, active, isCarry = false) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.setAttribute('class', active ? (isCarry ? 'wire-carry-on' : 'wire-on') : 'wire-off');
+    }
+
+    function setDot(id, active) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.setAttribute('class', active ? 'node-dot-on' : 'node-dot-off');
+    }
+
+    function setGate(id, active, type = 'sum') {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (!active) {
+        el.setAttribute('class', 'gate-body');
+      } else {
+        el.setAttribute('class', type === 'carry' ? 'gate-body gate-active-carry' : 'gate-body gate-active-sum');
+      }
+    }
+
+    // ==================== RENDER HALF ADDER ====================
+    function updateHalfAdder() {
+      const { a, b } = state.ha;
+      const sum = a ^ b;
+      const carry = a & b;
+      const rowIndex = (a << 1) | b;
+      state.ha.verified[rowIndex] = true;
+
+      styleBadge(document.getElementById('valHaA'), a, 'emerald');
+      styleBadge(document.getElementById('valHaB'), b, 'emerald');
+      styleBadge(document.getElementById('valHaSum'), sum, 'emerald');
+      styleBadge(document.getElementById('valHaCarry'), carry, 'amber');
+
+      document.getElementById('svgTextHaA').textContent = a;
+      document.getElementById('svgTextHaB').textContent = b;
+      document.getElementById('svgTextHaSum').textContent = sum;
+      document.getElementById('svgTextHaCarry').textContent = carry;
+
+      setWire('ha-wire-a-main', a === 1);
+      setWire('ha-wire-a-branch', a === 1);
+      setDot('ha-dot-a', a === 1);
+
+      setWire('ha-wire-b-main', b === 1);
+      setWire('ha-wire-b-branch', b === 1);
+      setDot('ha-dot-b', b === 1);
+
+      setWire('ha-wire-sum', sum === 1, false);
+      setWire('ha-wire-carry', carry === 1, true);
+
+      setGate('ha-gate-xor', sum === 1, 'sum');
+      setGate('ha-gate-and', carry === 1, 'carry');
+
+      document.getElementById('ha-led-sum-box').setAttribute('stroke', sum ? '#10b981' : '#475569');
+      document.getElementById('ha-led-carry-box').setAttribute('stroke', carry ? '#f59e0b' : '#475569');
+
+      document.getElementById('haLiveSumEq').textContent = `Sum = A ⊕ B = ${a} ⊕ ${b} = ${sum}`;
+      document.getElementById('haLiveCarryEq').textContent = `Carry = A · B = ${a} · ${b} = ${carry}`;
+      const dec = (carry << 1) | sum;
+      document.getElementById('haBinaryMath').textContent = `${a}₂ + ${b}₂ = ${carry}${sum}₂ (Decimal: ${dec})`;
+
+      ['00', '01', '10', '11'].forEach(key => {
+        const sCell = document.getElementById(`ha-kmap-s-${key}`);
+        const cCell = document.getElementById(`ha-kmap-c-${key}`);
+        sCell.className = 'kmap-cell p-2 rounded border border-slate-800 bg-slate-900';
+        cCell.className = 'kmap-cell p-2 rounded border border-slate-800 bg-slate-900';
+      });
+      const activeKey = `${a}${b}`;
+      document.getElementById(`ha-kmap-s-${activeKey}`).classList.add('kmap-active');
+      document.getElementById(`ha-kmap-c-${activeKey}`).classList.add('kmap-active-carry');
+
+      const tbody = document.getElementById('haTruthTableBody');
+      tbody.innerHTML = '';
+      for (let i = 0; i < 4; i++) {
+        const ra = (i >> 1) & 1;
+        const rb = i & 1;
+        const rSum = ra ^ rb;
+        const rCarry = ra & rb;
+        const isCurrent = (ra === a && rb === b);
+        const isVer = state.ha.verified[i];
+
+        const tr = document.createElement('tr');
+        tr.className = `cursor-pointer transition ${isCurrent ? 'bg-emerald-500/15 font-bold text-white' : 'hover:bg-slate-800/60 text-slate-300'}`;
+        tr.innerHTML = `
+          <td class="py-2.5 px-3">${ra}</td>
+          <td class="py-2.5 px-3">${rb}</td>
+          <td class="py-2.5 px-3 ${rSum ? 'text-emerald-400 font-bold' : ''}">${rSum}</td>
+          <td class="py-2.5 px-3 ${rCarry ? 'text-amber-400 font-bold' : ''}">${rCarry}</td>
+          <td class="py-2.5 px-3 text-right">
+            ${isVer
+              ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">✓ Verified</span>`
+              : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-slate-800 text-slate-400">Click to test</span>`
+            }
+          </td>
+        `;
+        tr.addEventListener('click', () => {
+          state.ha.a = ra;
+          state.ha.b = rb;
+          updateHalfAdder();
+        });
+        tbody.appendChild(tr);
+      }
+
+      updateVerifiedCounter();
+    }
+
+    // ==================== RENDER FULL ADDER (WITH S1, C1, C2 TRUTH TABLE) ====================
+    function updateFullAdder() {
+      const { a, b, cin } = state.fa;
+      const s1 = a ^ b;
+      const c1 = a & b;
+      const sum = s1 ^ cin;
+      const c2 = s1 & cin;
+      const cout = c1 | c2;
+
+      const rowIndex = (a << 2) | (b << 1) | cin;
+      state.fa.verified[rowIndex] = true;
+
+      // Top Badges
+      styleBadge(document.getElementById('valFaA'), a, 'emerald');
+      styleBadge(document.getElementById('valFaB'), b, 'emerald');
+      styleBadge(document.getElementById('valFaCin'), cin, 'cyan');
+      styleBadge(document.getElementById('valFaSum'), sum, 'emerald');
+      styleBadge(document.getElementById('valFaCout'), cout, 'amber');
+
+      // Intermediate Pill Badges
+      const pillS1 = document.getElementById('pillFaS1');
+      const pillC1 = document.getElementById('pillFaC1');
+      const pillC2 = document.getElementById('pillFaC2');
+      pillS1.textContent = s1;
+      pillC1.textContent = c1;
+      pillC2.textContent = c2;
+      pillS1.className = `text-sm font-extrabold mono px-2.5 py-0.5 rounded transition ${s1 ? 'bg-purple-500 text-slate-950 shadow shadow-purple-500/40' : 'bg-slate-800 text-purple-300'}`;
+      pillC1.className = `text-sm font-extrabold mono px-2.5 py-0.5 rounded transition ${c1 ? 'bg-pink-500 text-slate-950 shadow shadow-pink-500/40' : 'bg-slate-800 text-pink-300'}`;
+      pillC2.className = `text-sm font-extrabold mono px-2.5 py-0.5 rounded transition ${c2 ? 'bg-orange-500 text-slate-950 shadow shadow-orange-500/40' : 'bg-slate-800 text-orange-300'}`;
+
+      // SVG Text
+      document.getElementById('svgTextFaA').textContent = a;
+      document.getElementById('svgTextFaB').textContent = b;
+      document.getElementById('svgTextFaCin').textContent = cin;
+      document.getElementById('svgTextFaSum').textContent = sum;
+      document.getElementById('svgTextFaCout').textContent = cout;
+
+      // Intermediate Signal Badges inside SVG
+      document.getElementById('faBadgeS1').textContent = `S₁ = ${s1}`;
+      document.getElementById('faBadgeS1').setAttribute('fill', s1 ? '#e9d5ff' : '#94a3b8');
+      document.getElementById('faBadgeC1').textContent = `C₁ = ${c1}`;
+      document.getElementById('faBadgeC1').setAttribute('fill', c1 ? '#fbcfe8' : '#94a3b8');
+      document.getElementById('faBadgeC2').textContent = `C₂ = ${c2}`;
+      document.getElementById('faBadgeC2').setAttribute('fill', c2 ? '#fed7aa' : '#94a3b8');
+
+      // Wires & Dots
+      setWire('fa-wire-a', a === 1);
+      setWire('fa-wire-a-and1', a === 1);
+      setDot('fa-dot-a', a === 1);
+
+      setWire('fa-wire-b', b === 1);
+      setWire('fa-wire-b-and1', b === 1);
+      setDot('fa-dot-b', b === 1);
+
+      setWire('fa-wire-s1', s1 === 1);
+      setWire('fa-wire-s1-and2', s1 === 1);
+      setDot('fa-dot-s1', s1 === 1);
+
+      setWire('fa-wire-cin', cin === 1);
+      setWire('fa-wire-cin-and2', cin === 1);
+      setDot('fa-dot-cin', cin === 1);
+
+      setWire('fa-wire-c1', c1 === 1, true);
+      setWire('fa-wire-c2', c2 === 1, true);
+      setWire('fa-wire-sum', sum === 1, false);
+      setWire('fa-wire-cout', cout === 1, true);
+
+      // Gates
+      setGate('fa-gate-xor1', s1 === 1, 'sum');
+      setGate('fa-gate-and1', c1 === 1, 'carry');
+      setGate('fa-gate-xor2', sum === 1, 'sum');
+      setGate('fa-gate-and2', c2 === 1, 'carry');
+      setGate('fa-gate-or', cout === 1, 'carry');
+
+      document.getElementById('fa-led-sum-box').setAttribute('stroke', sum ? '#10b981' : '#475569');
+      document.getElementById('fa-led-cout-box').setAttribute('stroke', cout ? '#f59e0b' : '#475569');
+
+      // Live Equations
+      document.getElementById('faEqS1').textContent = `1) S₁ = A ⊕ B = ${a} ⊕ ${b} = ${s1}  |  C₁ = A · B = ${a} · ${b} = ${c1}`;
+      document.getElementById('faEqSum').textContent = `2) Sum = S₁ ⊕ C_in = ${s1} ⊕ ${cin} = ${sum}`;
+      document.getElementById('faEqCout').textContent = `3) C_out = C₁ + C₂ = ${c1} + (${s1}·${cin}) = ${c1} + ${c2} = ${cout}`;
+      const dec = (cout << 1) | sum;
+      document.getElementById('faBinaryMath').textContent = `${a}₂ + ${b}₂ + ${cin}₂ = ${cout}${sum}₂ (Dec: ${dec})`;
+
+      // Full Adder Complete Truth Table (Inputs: A, B, Cin | Intermediate: S1, C1, C2 | Final: Sum, Cout)
+      const tbody = document.getElementById('faTruthTableBody');
+      tbody.innerHTML = '';
+      for (let i = 0; i < 8; i++) {
+        const ra = (i >> 2) & 1;
+        const rb = (i >> 1) & 1;
+        const rcin = i & 1;
+        const rs1 = ra ^ rb;
+        const rc1 = ra & rb;
+        const rc2 = rs1 & rcin;
+        const rSum = rs1 ^ rcin;
+        const rCout = rc1 | rc2;
+        const isCurrent = (ra === a && rb === b && rcin === cin);
+        const isVer = state.fa.verified[i];
+
+        const tr = document.createElement('tr');
+        tr.className = `cursor-pointer transition ${isCurrent ? 'bg-cyan-500/15 font-bold text-white ring-1 ring-inset ring-cyan-500/40' : 'hover:bg-slate-800/60 text-slate-300'}`;
+        tr.innerHTML = `
+          <td class="py-2 px-2">${ra}</td>
+          <td class="py-2 px-2">${rb}</td>
+          <td class="py-2 px-2 text-cyan-300 border-r border-slate-800">${rcin}</td>
+          <td class="py-2 px-2 bg-purple-950/10 ${rs1 ? 'text-purple-300 font-bold' : 'text-slate-500'}">${rs1}</td>
+          <td class="py-2 px-2 bg-pink-950/10 ${rc1 ? 'text-pink-300 font-bold' : 'text-slate-500'}">${rc1}</td>
+          <td class="py-2 px-2 bg-orange-950/10 border-r border-slate-800 ${rc2 ? 'text-orange-300 font-bold' : 'text-slate-500'}">${rc2}</td>
+          <td class="py-2 px-2 ${rSum ? 'text-emerald-400 font-extrabold' : 'text-slate-400'}">${rSum}</td>
+          <td class="py-2 px-2 border-r border-slate-800 ${rCout ? 'text-amber-400 font-extrabold' : 'text-slate-400'}">${rCout}</td>
+          <td class="py-2 px-2">
+            ${isVer
+              ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">✓</span>`
+              : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-slate-800 text-slate-400">Test</span>`
+            }
+          </td>
+        `;
+        tr.addEventListener('click', () => {
+          state.fa.a = ra;
+          state.fa.b = rb;
+          state.fa.cin = rcin;
+          updateFullAdder();
+        });
+        tbody.appendChild(tr);
+      }
+
+      updateVerifiedCounter();
+    }
+
+    // ==================== RENDER 4-BIT RIPPLE CARRY ADDER ====================
+    function updateRippleCarryAdder() {
+      const A = state.rca.a;
+      const B = state.rca.b;
+
+      document.querySelectorAll('.rca-btn-a').forEach(btn => {
+        const bit = parseInt(btn.getAttribute('data-rca-a'), 10);
+        const val = A[bit];
+        btn.querySelector('div:last-child').textContent = val;
+        btn.className = `rca-btn-a p-3 rounded-lg border text-center transition ${val ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300' : 'bg-slate-900 border-slate-700 text-white'}`;
+      });
+
+      document.querySelectorAll('.rca-btn-b').forEach(btn => {
+        const bit = parseInt(btn.getAttribute('data-rca-b'), 10);
+        const val = B[bit];
+        btn.querySelector('div:last-child').textContent = val;
+        btn.className = `rca-btn-b p-3 rounded-lg border text-center transition ${val ? 'bg-cyan-500/20 border-cyan-500 text-cyan-300' : 'bg-slate-900 border-slate-700 text-white'}`;
+      });
+
+      let carry = 0;
+      const stages = [];
+      for (let i = 0; i < 4; i++) {
+        const cin = carry;
+        const sum = A[i] ^ B[i] ^ cin;
+        const cout = (A[i] & B[i]) | (cin & (A[i] ^ B[i]));
+        stages.push({ bit: i, a: A[i], b: B[i], cin, sum, cout });
+        carry = cout;
+      }
+
+      const valA = (A[3] << 3) | (A[2] << 2) | (A[1] << 1) | A[0];
+      const valB = (B[3] << 3) | (B[2] << 2) | (B[1] << 1) | B[0];
+      const total = valA + valB;
+      const binA = `${A[3]}${A[2]}${A[1]}${A[0]}`;
+      const binB = `${B[3]}${B[2]}${B[1]}${B[0]}`;
+      const binSum = `${stages[3].cout}${stages[3].sum}${stages[2].sum}${stages[1].sum}${stages[0].sum}`;
+
+      document.getElementById('rcaValADec').textContent = `Decimal: ${valA}`;
+      document.getElementById('rcaValBDec').textContent = `Decimal: ${valB}`;
+      document.getElementById('rcaDecimalSummary').textContent = `${binA}₂ (${valA}) + ${binB}₂ (${valB}) = ${binSum}₂ (${total})`;
+
+      const grid = document.getElementById('rcaStagesGrid');
+      grid.innerHTML = '';
+      for (let i = 3; i >= 0; i--) {
+        const st = stages[i];
+        const card = document.createElement('div');
+        card.className = 'bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-2.5 relative';
+        card.innerHTML = `
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <span class="text-xs font-bold text-white">Full Adder FA${st.bit}</span>
+            <span class="text-[11px] mono px-2 py-0.5 rounded bg-slate-900 text-slate-400">Bit ${st.bit}</span>
+          </div>
+          <div class="grid grid-cols-3 gap-1.5 text-center text-xs mono">
+            <div class="p-1.5 rounded bg-slate-900 border border-slate-800">
+              <div class="text-[10px] text-slate-400">A${st.bit}</div>
+              <div class="font-bold text-white">${st.a}</div>
+            </div>
+            <div class="p-1.5 rounded bg-slate-900 border border-slate-800">
+              <div class="text-[10px] text-slate-400">B${st.bit}</div>
+              <div class="font-bold text-white">${st.b}</div>
+            </div>
+            <div class="p-1.5 rounded bg-slate-900 border border-slate-800">
+              <div class="text-[10px] text-cyan-400">C_in</div>
+              <div class="font-bold ${st.cin ? 'text-cyan-300' : 'text-slate-400'}">${st.cin}</div>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2 pt-1 text-center mono">
+            <div class="p-2 rounded-lg border ${st.sum ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300' : 'bg-slate-900 border-slate-800 text-slate-400'}">
+              <div class="text-[10px] uppercase">Sum S${st.bit}</div>
+              <div class="text-base font-extrabold">${st.sum}</div>
+            </div>
+            <div class="p-2 rounded-lg border ${st.cout ? 'bg-amber-500/15 border-amber-500/40 text-amber-300' : 'bg-slate-900 border-slate-800 text-slate-400'}">
+              <div class="text-[10px] uppercase">C_out ${st.bit + 1}</div>
+              <div class="text-base font-extrabold">${st.cout}</div>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      }
+    }
+
+    function updateVerifiedCounter() {
+      const counter = document.getElementById('verifiedCounter');
+      if (state.activeTab === 'half') {
+        const count = state.ha.verified.filter(Boolean).length;
+        counter.textContent = `${count} / 4`;
+      } else {
+        const count = state.fa.verified.filter(Boolean).length;
+        counter.textContent = `${count} / 8`;
+      }
+    }
+
+    // ==================== AUTO VERIFY STEP-THROUGH ====================
+    function stopAutoVerify() {
+      if (state.autoTimer) {
+        clearInterval(state.autoTimer);
+        state.autoTimer = null;
+      }
+      document.getElementById('autoVerifyIcon').textContent = '▶';
+      document.getElementById('autoVerifyText').textContent = 'Auto-Verify Truth Table';
+    }
+
+    function toggleAutoVerify() {
+      if (state.autoTimer) {
+        stopAutoVerify();
+        return;
+      }
+      if (state.activeTab !== 'half' && state.activeTab !== 'full') {
+        switchTab('full');
+      }
+      document.getElementById('autoVerifyIcon').textContent = '⏹';
+      document.getElementById('autoVerifyText').textContent = 'Stop Auto-Verify';
+
+      let step = 0;
+      const maxSteps = state.activeTab === 'half' ? 4 : 8;
+
+      const runStep = () => {
+        if (state.activeTab === 'half') {
+          state.ha.a = (step >> 1) & 1;
+          state.ha.b = step & 1;
+          updateHalfAdder();
+        } else {
+          state.fa.a = (step >> 2) & 1;
+          state.fa.b = (step >> 1) & 1;
+          state.fa.cin = step & 1;
+          updateFullAdder();
+        }
+        step++;
+        if (step >= maxSteps) {
+          stopAutoVerify();
+        }
+      };
+
+      runStep();
+      state.autoTimer = setInterval(runStep, 900);
+    }
+
+    // ==================== TAB SWITCHING ====================
+    function switchTab(tabId) {
+      stopAutoVerify();
+      state.activeTab = tabId;
+      ['half', 'full', 'compare', 'ripple'].forEach(id => {
+        const sec = document.getElementById(`tab-${id}`);
+        if (sec) sec.classList.toggle('hidden', id !== tabId);
+      });
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        const isAct = btn.getAttribute('data-tab') === tabId;
+        btn.className = `tab-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-t-lg border-b-2 whitespace-nowrap transition ${
+          isAct
+            ? 'border-emerald-400 text-emerald-400 bg-slate-800/70'
+            : 'border-transparent text-slate-400 hover:text-slate-200'
+        }`;
+      });
+      updateVerifiedCounter();
+    }
+
+    // ==================== LANGUAGE TOGGLE ====================
+    function toggleLanguage() {
+      state.langMode = state.langMode === 'bn' ? 'en' : 'bn';
+      const title = document.getElementById('bannerTitle');
+      const desc = document.getElementById('bannerDesc');
+      const label = document.getElementById('langLabel');
+
+      if (state.langMode === 'bn') {
+        label.textContent = 'বাংলা / EN: Banglish Guide';
+        title.textContent = 'প্রজেক্টের মূল বিষয় (What this COA Project means):';
+        desc.innerHTML = `এই প্রজেক্টে তোমাকে লজিক গেট (XOR, AND, OR) ব্যবহার করে দুটি বাইনারি যোগের সার্কিট—<strong class="text-emerald-400">Half Adder</strong> (২টি ইনপুট: A, B) এবং <strong class="text-amber-400">Full Adder</strong> (৩টি ইনপুট: A, B, C<sub>in</sub>)—ডিজাইন করতে হবে, ইন্টারমিডিয়েট সিগন্যাল (<strong class="text-purple-300">S₁, C₁, C₂</strong>)-সহ প্রতিটি ইনপুটের জন্য <strong>Sum</strong> ও <strong>Carry</strong> বের করে Truth Table ভেরিফাই করতে হবে এবং দুটি সার্কিটের তুলনা করতে হবে।`;
+      } else {
+        label.textContent = 'EN / বাংলা: English Mode';
+        title.textContent = 'COA Project Statement Breakdown:';
+        desc.innerHTML = `Design and simulate combinational logic circuits for binary addition—the <strong class="text-emerald-400">Half Adder</strong> (2 inputs: A, B) and <strong class="text-amber-400">Full Adder</strong> (3 inputs: A, B, C<sub>in</sub>)—compute intermediate signals (<strong class="text-purple-300">S₁, C₁, C₂</strong>) and final <strong>Sum</strong> and <strong>Carry</strong> outputs across all binary inputs, verify their Truth Tables, and compare both circuits.`;
+      }
+    }
+
+    // ==================== EVENT LISTENERS ====================
+    window.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab')));
+      });
+
+      const toggleHaA = () => { state.ha.a ^= 1; updateHalfAdder(); };
+      const toggleHaB = () => { state.ha.b ^= 1; updateHalfAdder(); };
+      document.getElementById('btnHaA').addEventListener('click', toggleHaA);
+      document.getElementById('btnHaB').addEventListener('click', toggleHaB);
+      document.getElementById('svgBtnHaA').addEventListener('click', toggleHaA);
+      document.getElementById('svgBtnHaB').addEventListener('click', toggleHaB);
+
+      const toggleFaA = () => { state.fa.a ^= 1; updateFullAdder(); };
+      const toggleFaB = () => { state.fa.b ^= 1; updateFullAdder(); };
+      const toggleFaCin = () => { state.fa.cin ^= 1; updateFullAdder(); };
+      document.getElementById('btnFaA').addEventListener('click', toggleFaA);
+      document.getElementById('btnFaB').addEventListener('click', toggleFaB);
+      document.getElementById('btnFaCin').addEventListener('click', toggleFaCin);
+      document.getElementById('svgBtnFaA').addEventListener('click', toggleFaA);
+      document.getElementById('svgBtnFaB').addEventListener('click', toggleFaB);
+      document.getElementById('svgBtnFaCin').addEventListener('click', toggleFaCin);
+
+      document.querySelectorAll('.rca-btn-a').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const bit = parseInt(btn.getAttribute('data-rca-a'), 10);
+          state.rca.a[bit] ^= 1;
+          updateRippleCarryAdder();
+        });
+      });
+      document.querySelectorAll('.rca-btn-b').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const bit = parseInt(btn.getAttribute('data-rca-b'), 10);
+          state.rca.b[bit] ^= 1;
+          updateRippleCarryAdder();
+        });
+      });
+
+      document.getElementById('btnLangToggle').addEventListener('click', toggleLanguage);
+      document.getElementById('btnAutoVerify').addEventListener('click', toggleAutoVerify);
+      document.getElementById('btnResetVerify').addEventListener('click', () => {
+        stopAutoVerify();
+        state.ha = { a: 0, b: 0, verified: [false, false, false, false] };
+        state.fa = { a: 0, b: 0, cin: 0, verified: [false, false, false, false, false, false, false, false] };
+        updateHalfAdder();
+        updateFullAdder();
+      });
+
+      updateHalfAdder();
+      updateFullAdder();
+      updateRippleCarryAdder();
+    });
+  </script>
+</body>
+</html>
